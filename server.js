@@ -56,11 +56,88 @@ app.get('/', (req, res) => {
 app.get('/api/products', (req, res) => {
   res.json(products);
 });
+// GET /api/products/:id - Get a specific product
+app.get('/api/products/:id', (req, res)=>{
+  const productId = req.params.id;
+  const product = products.find(p => p.id === productId);
+  if(product){
+    res.json(product);
+  }else{
+    res.status(404).json({error: 'product not found'})
+    }
+
+});
+
+// POST /api/products - Create a new product
+app.post('/api/products', (req, res)=>{
+  const newProduct = {
+    id: uuidv4(), // Generate a unique ID for the new product
+    ...req.body // Spread the request body to include all product details
+  }
+  products.push(newProduct);
+  res.status(201).json(newProduct);
+});
+
+// PUT /api/products/:id - Update a product
+app.put('/api/products/:id', (req, res) => {
+  const productId = req.params.id;
+  const productIndex = products.findIndex(p => p.id === productId);
+  
+  if (productIndex !== -1) {
+    const updatedProduct = {
+      ...products[productIndex],
+      ...req.body // Update the product with the new data
+    };
+    products[productIndex] = updatedProduct;
+    res.json(updatedProduct);
+  } else {
+    res.status(404).json({ error: 'Product not found' });
+  }
+});
+
+// DELETE /api/products/:id - Delete a product
+app.delete('/api/products/:id', (req, res) => {
+  const productId = req.params.id;
+  const productIndex = products.findIndex(p => p.id === productId);
+  
+  if (productIndex !== -1) {
+    products.splice(productIndex, 1); // Remove the product from the array
+    res.status(204).send(); // No content response
+  } else {
+    res.status(404).json({ error: 'Product not found' });
+  }
+});
 
 // TODO: Implement custom middleware for:
 // - Request logging
 // - Authentication
 // - Error handling
+// Create product (with auth & error handling)
+app.post('/api/products', authenticate, (req, res, next) => {
+  try {
+    const { name, description, price, category, inStock } = req.body;
+    if (!name || typeof price !== 'number') {
+      return res.status(400).json({ message: 'Invalid product data' });
+    }
+    const newProduct = {
+      id: uuidv4(),
+      name,
+      description,
+      price,
+      category,
+      inStock
+    };
+    products.push(newProduct);
+    res.status(201).json(newProduct);
+  } catch (error) {
+    next(error); // Forward error to middleware
+  }
+});
+// Custom middleware for request logging
+app.use((req, res, next) => {
+  console.log(`${req.method} request for '${req.url}'`);
+  next();
+});
 
 // Start the server
 app.listen(PORT, () => {
